@@ -48,3 +48,10 @@ def test_read_input_csv():
                         ['Walker', 'Steve', 'Accommodation manager', 'steve.walke@hicks.info', '(876)953-8282x713']]
 
     assert result == expected_result
+
+
+def test_parse_input_csv():
+    result = gen_vcard.parse_input_csv(('Mason', 'Nicole', 'Buyer, retail', 'nicol.mason@gibson.com', '(871)967-6024x82190'))
+    expected_result = 'NMason.vcf', '\nBEGIN:VCARD\nVERSION:2.1\nN:Mason;Nicole\nFN:Nicole Mason\nORG:Authors, Inc.\nTITLE:Buyer, retail\nTEL;WORK;VOICE:(871)967-6024x82190\nADR;WORK:;;100 Flat Grape Dr.;Fresno;CA;95555;United States of America\nEMAIL;PREF;INTERNET:nicol.mason@gibson.com\nREV:20150922T195243Z\nEND:VCARD\n'
+
+    assert result == expected_result
