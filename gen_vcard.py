@@ -17,6 +17,13 @@ EMAIL;PREF;INTERNET:{email}
 REV:20150922T195243Z
 END:VCARD
 """
+def read_input_csv(csvfile):
+    ret=[]
+    with open(csvfile,newline='') as f:
+        row = csv.reader(f)
+        for r in row:
+            ret.append(r)
+    return ret
 
 if __name__=="__main__":
     create_vcard()
