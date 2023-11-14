@@ -62,3 +62,7 @@ def test_invalid_parse_input_csv():
     expected_result = 'NMason.vcf', '\nBEGIN:VCARD\nVERSION:2.1\nN:Mason;\nFN:Nicole Mason\nORG:Authors, Inc.\nTITLE:Buyer, retail\nTEL;WORK;VOICE:(871)967-6024x82190\nADR;WORK:;;100 Flat Grape Dr.;Fresno;CA;95555;United States of America\nEMAIL;PREF;INTERNET:nicol.mason@gibson.com\nREV:20150922T195243Z\nEND:VCARD\n'
 
     assert not result == expected_result
+
+def test_create_qr_code():
+    result = gen_vcard.create_qr_code(('Mason', 'Nicole', 'Buyer, retail', 'nicol.mason@gibson.com', '(871)967-6024x82190'))
+    assert result[0] == 'NMason.qr.png' and result[1].status_code == 200
