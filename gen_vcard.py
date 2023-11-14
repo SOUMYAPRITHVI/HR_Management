@@ -25,6 +25,13 @@ def read_input_csv(csvfile):
             ret.append(r)
     return ret
 
+
+def parse_input_csv(row):
+    lname,fname,title,email,phone=row
+    vcard=create_vcard(lname,fname,title,email,phone)
+    filename=f'{fname[:1]}{lname}.vcf'
+    return filename,vcard
+
 if __name__=="__main__":
     create_vcard()
     
