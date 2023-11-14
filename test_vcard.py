@@ -33,3 +33,18 @@ EMAIL;PREF;INTERNET:nicol.mason@gibson.com
 REV:20150922T195243Z
 END:VCARD
 """
+def test_read_input_csv():
+    data = [['Mason', 'Nicole', 'Buyer, retail', 'nicol.mason@gibson.com', '(871)967-6024x82190'], 
+                           ['Walker', 'Steve', 'Accommodation manager', 'steve.walke@hicks.info', '(876)953-8282x713']]
+
+    with open('news.csv', 'w',newline='') as csvfile:
+        w = csv.writer(csvfile)
+        for row in data:
+            w.writerow(row)
+
+    # Call the function with the file-like object
+    result = gen_vcard.read_input_csv('news.csv')
+    expected_result = [['Mason', 'Nicole', 'Buyer, retail', 'nicol.mason@gibson.com', '(871)967-6024x82190'], 
+                        ['Walker', 'Steve', 'Accommodation manager', 'steve.walke@hicks.info', '(876)953-8282x713']]
+
+    assert result == expected_result
