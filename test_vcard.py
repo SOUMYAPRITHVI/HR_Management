@@ -1,3 +1,5 @@
+import os
+
 import csv
 
 import gen_vcard
@@ -66,3 +68,8 @@ def test_invalid_parse_input_csv():
 def test_create_qr_code():
     result = gen_vcard.create_qr_code(('Mason', 'Nicole', 'Buyer, retail', 'nicol.mason@gibson.com', '(871)967-6024x82190'))
     assert result[0] == 'NMason.qr.png' and result[1].status_code == 200
+
+def test_generate_output():
+    op_directory=os.path.join(os.getcwd(),"V_cards")
+    gen_vcard.generate_output(op_directory)
+    assert os.path.exists(op_directory)
