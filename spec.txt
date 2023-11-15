@@ -1,56 +1,35 @@
 Task Specification: Create Visiting Cards from CSV Data and Store in VCF Format
 
 1. Objective:
-   Create individual visiting cards (vCards) for each person's data from a CSV file and store them in VCF format.
+
+   Create individual visiting cards (vCards) and QRcodes for each person's data from a CSV file and store them in VCF format.
 
 2. Input:
-   - CSV file containing information about individuals (e.g., name, Designation, email, phone).
+
+   - CSV file containing information about individuals in the following format
+
+      Mason,Nicole,"Buyer, retail",nicol.mason@gibson.com,(871)967-6024x82190
 
 3. Output:
-   - Individual vCards for each person, stored in VCF format.
-   - The vCards should be organized and stored in a folder named V_cards.
 
-4. Procedure:
-   - Read data from the CSV file.
-   - For each person's data:
-     - Extract relevant information (e.g., Last Name, First Name, Designation, Email, Phone).
-     - Generate a vCard using the extracted information.
-     - Save the vCard in VCF format.
-     - Organize and store the vCards in a folder named V_cards.
+   - Individual vCards and QRcodes generated for each person . The filename will be the first letter of first name with last name (e.g.NMason.vcf,NMason.qr.png).
+   - The vCards will be organized and stored in a folder named V_cards in following format
 
-5. vCard Format:
-   - Use the vCard format (version 2.1).
-   - Include fields such as Last Name, First Name, Designation, Title, Phone, Email, etc.
+   BEGIN:VCARD
+   VERSION:2.1
+   N:Mason;Nicole
+   FN:Nicole Mason
+   ORG:Authors, Inc.
+   TITLE:Buyer, retail
+   TEL;WORK;VOICE:(871)967-6024x82190
+   ADR;WORK:;;100 Flat Grape Dr.;Fresno;CA;95555;United States of America
+   EMAIL;PREF;INTERNET:nicol.mason@gibson.com
+   REV:20150922T195243Z
+   END:VCARD
 
-6. Folder Structure:
-   - Create a folder named V_cards to store the vCards.
-   - Save each vCard with a file name format, e.g., "first letter of First Name and Last Name.vcf".
+4.Usage
 
-7. Programming Language:
-   - Python.
-
-8. Libraries:
-   - os,csv module
-
-9. Error Handling:
-    - Handle potential errors gracefully, such as missing CSV file, invalid data, or inability to create the output folder.
-
-10. Testing:
-    - Conduct thorough testing with different CSV files containing varying data.
-    - Ensure the generated vCards are correctly formatted and organized.
-
-11. User Guide:
-    - Provide a simple user guide explaining how to run the program and specifying the required inputs.
-
-12. Completion Criteria:
-    - Successfully generate vCards for all individuals from the provided CSV file.
-    - Store the vCards in the user-specified folder.
-    - The program should run without errors and handle unexpected situations appropriately.
-
-13. Optional Enhancements:
-    - Allow customization of the vCard format.
-    - Include additional fields in the vCard based on user preferences.
-    - Implement a graphical user interface (GUI) for a more user-friendly experience.
-
-
+   - The script can be executed from the command line using:
+      
+       python3 gen_vcard.py names.csv <input file>
 
