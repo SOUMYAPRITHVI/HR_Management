@@ -32,6 +32,13 @@ def parse_input_csv(row):
     filename=f'{fname[:1]}{lname}.vcf'
     return filename,vcard
 
+def create_qr_code(row):
+    lname,fname,title,email,phone=row
+    url=f"https://chart.googleapis.com/chart?cht=qr&chs=500x500&chl={email}"
+    resp=requests.get(url)
+    qr_file=f'{fname[:1]}{lname}.qr.png'
+    return qr_file,resp
+
 if __name__=="__main__":
     create_vcard()
     
