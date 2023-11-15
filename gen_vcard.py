@@ -17,6 +17,7 @@ EMAIL;PREF;INTERNET:{email}
 REV:20150922T195243Z
 END:VCARD
 """
+
 def read_input_csv(csvfile):
     ret=[]
     with open(csvfile,newline='') as f:
@@ -24,7 +25,6 @@ def read_input_csv(csvfile):
         for r in row:
             ret.append(r)
     return ret
-
 
 def parse_input_csv(row):
     lname,fname,title,email,phone=row
@@ -39,6 +39,21 @@ def create_qr_code(row):
     qr_file=f'{fname[:1]}{lname}.qr.png'
     return qr_file,resp
 
+def generate_output(op_directory='V_cards'):
+    if not os.path.exists(op_directory):
+        os.makedirs(op_directory)
+        row=read_input_csv('names.csv')
+        for r in row:
+            filename,vcard=parse_input_csv(r)
+            vcard_path=os.path.join(op_directory,filename)
+            with open(vcard_path, 'w') as f:
+                f.write(vcard)
+            qrfile,resp=create_qr_code(r)
+            print(qrfile,resp)
+            vcard_path=os.path.join(op_directory,qrfile)
+            with open(vcard_path, 'wb') as f:
+                f.write(resp.content)
+
 if __name__=="__main__":
-    create_vcard()
+    generate_output()
     
