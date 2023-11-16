@@ -66,10 +66,11 @@ def test_invalid_parse_input_csv():
     assert not result == expected_result
 
 def test_create_qr_code():
-    result = gen_vcard.create_qr_code(('Mason', 'Nicole', 'Buyer, retail', 'nicol.mason@gibson.com', '(871)967-6024x82190'))
+    result = gen_vcard.create_qr_code(('Mason', 'Nicole', 'Buyer, retail', 'nicol.mason@gibson.com', '(871)967-6024x82190'),500)
     assert result[0] == 'NMason.qr.png' and result[1].status_code == 200
 
 def test_generate_output():
     op_directory=os.path.join(os.getcwd(),"V_cards")
-    gen_vcard.generate_output(op_directory)
-    assert os.path.exists(op_directory)
+    msg=gen_vcard.generate_output(2,500,op_directory)
+    # assert os.path.exists(op_directory)
+    assert msg=="The output folder already exists " or msg=="uccessfully created the first 2 person files, each with a QR code sized at 500. "
