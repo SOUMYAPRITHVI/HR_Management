@@ -1,33 +1,47 @@
 import argparse
 import csv
 import logging
-import os  
+import os 
+import psycopg2 
 import requests
+import shutil
 
 logger=None
 
 def parse_args():
     parser=argparse.ArgumentParser(prog="gen_vcard.py",description="Generates sample names")
-    parser.add_argument("ipfile",help="names.csv")
+    parser.add_argument("ipfile",help="Name of the input file")
+    parser.add_argument("opfile",help="Name of the output file")
+    parser.add_argument("-b","--dbname",help="Name of the database",default='HRmgt')
+    parser.add_argument("-u","--dbuser",help="Username of the database")
+    
+    subparsers = parser.add_subparsers(dest="op")
+    subparsers.add_parser("initdb", help="initialise the database")
+    
+    parser.add_argument("-i","--input_type",help="Specify the data source",choices=['file','db'],required=True)
     parser.add_argument("-v", "--verbose", help="Print detailed logging", action='store_true', default=False)
     parser.add_argument("-n", "--number", help="Number of records to generate", action='store', type=int, default=10)
     parser.add_argument("-d", "--dimension", help="Change dimension of QRCODE", default=200 )
+    parser.add_argument("-q", "--add_qr", help="Generate QRCODE of each record",action='store_true',default=False)
+    parser.add_argument("-a", "--address", help="Change into new address",type=str, default="100 Flat Grape Dr.;Fresno;CA;95555;United States of America")
     args=parser.parse_args()
     return args
-def setup_logging(log_level):
+
+def setup_logging(is_verbose):
     global logger
-    logger=logging.getLogger("SheetGen")
+    if is_verbose:
+        level=logging.DEBUG
+    else:
+        level=logging.INFO
+    logger=logging.getLogger("HR")
     handler=logging.StreamHandler()
-    fhandler=logging.FileHandler("run.log")
-    fhandler.setLevel(logging.DEBUG)
-    handler.setLevel(log_level)
-    handler.setFormatter(logging.Formatter("[%(levelname)s] %(asctime)s | %(filename)s:%(lineno)d | %(message)s"))
-    fhandler.setFormatter(logging.Formatter("[%(levelname)s] %(asctime)s | %(filename)s:%(lineno)d | %(message)s"))
+    handler.setLevel(level)
+    handler.setFormatter(logging.Formatter("[%(levelname)s]| %(filename)s:%(lineno)d | %(message)s"))
     logger.setLevel(logging.DEBUG)
     logger.addHandler(handler)
-    logger.addHandler(fhandler)
-
-def create_vcard(lname,fname,title,email,phone):
+   
+def create_vcard(row,address):
+    lname,fname,title,email,phone=row
     return f"""
 BEGIN:VCARD
 VERSION:2.1
@@ -36,17 +50,22 @@ FN:{fname} {lname}
 ORG:Authors, Inc.
 TITLE:{title}
 TEL;WORK;VOICE:{phone}
-ADR;WORK:;;100 Flat Grape Dr.;Fresno;CA;95555;United States of America
+ADR;WORK:;;{address}
 EMAIL;PREF;INTERNET:{email}
 REV:20150922T195243Z
 END:VCARD
 """
+
 def file_exists(filename):
     if not os.path.exists(filename) or not os.path.isfile(filename):
         logger.error("%s input file not exists",filename)
         exit(1)
-def is_csv_file(filename):
-    return filename.endswith('.csv')
+
+def clear_output_dir(args):
+    if os.path.exists(args.opfile):
+        shutil.rmtree(os.path.join(args.opfile))
+        return "Folder removed"
+    
 def read_input_csv(csvfile):
     ret=[]
     with open(csvfile,newline='') as f:
@@ -55,49 +74,61 @@ def read_input_csv(csvfile):
             ret.append(r)
     return ret
 
-def parse_input_csv(row):
+def parse_input_csv(row,args):
     lname,fname,title,email,phone=row
-    vcard=create_vcard(lname,fname,title,email,phone)
+    vcard=create_vcard(lname,fname,title,email,phone,args.address)
     filename=f'{fname[:1]}{lname}.vcf'
     return filename,vcard
 
-def create_qr_code(row,dimension):
-    lname,fname,title,email,phone=row
-    url=f"https://chart.googleapis.com/chart?cht=qr&chs={dimension}x{dimension}&chl={email}"
+def create_vcard_file(row,vcard,args):
+    vcard_path=os.path.join(args.opfile,f"{str(row[2][:1])}{str(row[1])}.vcf")
+    with open(vcard_path, "w") as file:
+        file.write(vcard)
+   
+def create_qr_code(row,vcard,args):
+    url=f"https://chart.googleapis.com/chart?cht=qr&chs={args.dimension}x{args.dimension}&chl={args.email}"
     resp=requests.get(url)
-    qr_file=f'{fname[:1]}{lname}.qr.png'
-    return qr_file,resp
-
-def generate_output(number,dimension,op_directory='V_cards'):
-    if not os.path.exists(op_directory):
-        os.makedirs(op_directory)
-        row=read_input_csv('names.csv')
-        count=1
-        for r in row:
-            filename,vcard=parse_input_csv(r)
-            vcard_path=os.path.join(op_directory,filename)
-            with open(vcard_path, 'w') as f:
-                f.write(vcard)
-            qrfile,resp=create_qr_code(r,dimension)
-            vcard_path=os.path.join(op_directory,qrfile)
-            with open(vcard_path, 'wb') as f:
-                f.write(resp.content)
-            if count==number:
-                break
-            count+=1
-        return f"Successfully created the first {count} person files, each with a QR code sized at {dimension}. "
+    qr_path=os.path.join(args.opfile, f"{str(row[2][:1])}{str(row[1])}.qr.png")
+    if os.path.exists(qr_path):
+        logger.warning(f"File already exists: {qr_path}")
     else:
-        return "The output folder already exists "
-        
+        if os.access(args.opfile, os.W_OK):
+            with open(qr_path, "wb") as file:
+                file.write(url.content)
+                logger.info(f"Created QR code: {qr_path}")
+        else:
+            logger.warning(f"No write access to directory: {args.opfile}")
+           
+def initialize_db(args):
+    with open("data/init.sql") as f:
+        sql=f.read()
+        logger.debug(sql)
+    try:
+        con=psycopg2.connect(dbname=args.dbname)
+        cur=con.cursor()
+        cur.execute(sql)
+        con.commit()
+    except psycopg2.OperationalError as e:
+        logger.info(f"Database '{args.dbname}' doesn't exist")
+      
 def main():
     args=parse_args()
-    if args.verbose:
-        setup_logging(logging.DEBUG)
-    else:
-        setup_logging(logging.INFO)
-        
     file_exists(args.ipfile) #checks if file exists
-    logger.info(generate_output(args.number,args.dimension))
+    args = parse_args()
+    setup_logging(args.verbose)
+    ops = {"initdb" : initialize_db,
+            
+            }
+    ops[args.op](args)
+    data_from_db=fetch_values()
+    if data_from_db:
+        generate_output_from_db(data_from_db,args)
+    else:
+        logger.error("Failed to fetch database.")
+
 if __name__=="__main__":
     main()
     
+
+
+
