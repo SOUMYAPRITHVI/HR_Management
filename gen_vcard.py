@@ -23,6 +23,10 @@ def parse_args():
     # import csv
     import_parser = subparsers.add_parser("import", help="Import data from csv file")
     import_parser.add_argument("employees_file", help="List of employees to import")
+
+    query_parser = subparsers.add_parser("query", help="Get information for a single employee")
+    query_parser.add_argument("--vcard", action="store_true", default=False, help="Generate vcard for employee")
+    query_parser.add_argument("id", help="employee id")
    
     parser.add_argument("-i","--input_type",help="Specify the data source",choices=['file','db'],required=True)
     parser.add_argument("-v", "--verbose", help="Print detailed logging", action='store_true', default=False)
@@ -110,6 +114,20 @@ def handle_import(args):
     finally:
         cur.close()
         con.close() 
+def fetch_from_db(args):
+    con=psycopg2.connect(dbname=args.dbname)
+    cur=con.cursor()
+    query=f"select fname, lname, title, email, phone from employees where employee_id={args.id}"
+    cur.execute(query)
+    fname, lname, designation, email, phone = cur.fetchone()
+    print (f"""Name        : {fname} {lname}
+Designation : {designation}
+Email       : {email}
+Phone       : {phone}""")
+    if (args.vcard):
+        vcard = generate_vcard(lname, fname, designation, email, phone)
+        print (f"\n{vcard}")
+    con.close()
 
 
 def main():
@@ -118,7 +136,7 @@ def main():
         setup_logging(args.verbose)
         ops = {"initdb" : initialize_db,
                 "import" : handle_import,
-                
+                "query" : fetch_from_db
                 }
         
         ops[args.op](args)
