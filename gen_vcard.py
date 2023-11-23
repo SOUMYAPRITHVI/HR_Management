@@ -93,6 +93,7 @@ def initialize_db(args):
         cur=con.cursor()
         cur.execute(sql)
         con.commit()
+        logger.info('Database intialized successfully')
     except psycopg2.OperationalError as e:
         raise HRException(f"Database '{args.dbname}' doesn't exist")
      
