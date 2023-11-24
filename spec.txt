@@ -1,8 +1,9 @@
-Task Specification: Create Visiting Cards from CSV Data and Store in VCF Format
+Title:HR Management
+Auther: Soumya
 
 1. Objective:
 
-   Create individual visiting cards (vCards) and QRcodes for each person's data from a CSV file and store them in VCF format.
+   Create individual visiting cards (vCards)  from database.
 
 2. Input:
 
@@ -12,8 +13,7 @@ Task Specification: Create Visiting Cards from CSV Data and Store in VCF Format
 
 3. Output:
 
-   - Individual vCards and QRcodes generated for each person . The filename will be the first letter of first name with last name (e.g.NMason.vcf,NMason.qr.png).
-   - The vCards will be organized and stored in a folder named V_cards in following format
+   - Individual vCards 
 
    BEGIN:VCARD
    VERSION:2.1
@@ -32,4 +32,5 @@ Task Specification: Create Visiting Cards from CSV Data and Store in VCF Format
    - The script can be executed from the command line using:
       
        python3 gen_vcard.py names.csv <input file>
+
 
