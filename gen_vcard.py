@@ -4,7 +4,6 @@ import logging
 import os 
 import psycopg2 
 import requests
-import shutil
 import sys
 
 class HRException(Exception):pass
@@ -19,15 +18,27 @@ def parse_args():
     parser.add_argument("-u","--dbuser",help="Username of the database")
     # subcommand initdb
     subparsers = parser.add_subparsers(dest="op")
-    subparsers.add_parser("initdb", help="initialise the database")
+    subparsers.add_parser("initdb", help="Initialise the database")
+    
     # import csv
     import_parser = subparsers.add_parser("import", help="Import data from csv file")
     import_parser.add_argument("employees_file", help="List of employees to import")
-
+    # fetch vcard
     query_parser = subparsers.add_parser("query", help="Get information for a single employee")
     query_parser.add_argument("--vcard", action="store_true", default=False, help="Generate vcard for employee")
-    query_parser.add_argument("id", help="employee id")
+    query_parser.add_argument("id", help="Employee id")
+    # add leaves
+    leave_parser = subparsers.add_parser("leave", help="Add leave to database")
+    leave_parser.add_argument("date", type=str, help="Date of absence")
+    leave_parser.add_argument("employee_id", type=int, help="Employee id of absentee")
+    leave_parser.add_argument("reason", type=str, help="Reason of absence")
    
+    # add designation
+    designation_parser = subparsers.add_parser("designation", help="Add designation      to database")
+    designation_parser.add_argument("name", type=str, help="Name of designation")
+    designation_parser.add_argument("percentage", type=int, help="Percentage of employee in designation")
+    designation_parser.add_argument("leaves", type=str, help="Total no. of leaves")
+    
     parser.add_argument("-i","--input_type",help="Specify the data source",choices=['file','db'],required=True)
     parser.add_argument("-v", "--verbose", help="Print detailed logging", action='store_true', default=False)
     parser.add_argument("-n", "--number", help="Number of records to generate", action='store', type=int, default=10)
@@ -118,9 +129,9 @@ def handle_import(args):
 def fetch_from_db(args):
     con=psycopg2.connect(dbname=args.dbname)
     cur=con.cursor()
-    query=f"select fname, lname, title, email, phone from employees where employee_id={args.id}"
+    query=f"select e.fname, e.lname, e.email, e.phone,d.designation_name  from employees e  INNER JOIN designation d ON e.title_id = d.designation_id where e.employee_id={args.id}"
     cur.execute(query)
-    fname, lname, designation, email, phone = cur.fetchone()
+    fname, lname, email, phone ,designation= cur.fetchone()
     print (f"""Name        : {fname} {lname}
 Designation : {designation}
 Email       : {email}
@@ -130,6 +141,20 @@ Phone       : {phone}""")
         print (f"\n{vcard}")
     con.close()
 
+def insert_designation(args):
+    con=psycopg2.connect(dbname=args.dbname)
+    cur=con.cursor()
+    try:
+        psql="insert into designation(designation_name,percentage_of_employees,total_no_of_leaves) values(%s,%s,%s)"
+        cur.execute(psql,(args.name,args.percentage,args.leaves))
+        con.commit()
+        print("Designation details inserted ")
+    except:
+        con.rollback()
+        print("Designation details not inserted ")
+    finally:
+        cur.close()
+        con.close() 
 
 def main():
     try:
@@ -137,7 +162,10 @@ def main():
         setup_logging(args.verbose)
         ops = {"initdb" : initialize_db,
                 "import" : handle_import,
-                "query" : fetch_from_db
+                "query" : fetch_from_db,
+               
+                "designation" : insert_designation,
+               
                 }
         
         ops[args.op](args)
