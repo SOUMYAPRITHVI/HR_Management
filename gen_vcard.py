@@ -32,13 +32,10 @@ def parse_args():
     leave_parser.add_argument("date", type=str, help="Date of absence")
     leave_parser.add_argument("employee_id", type=int, help="Employee id of absentee")
     leave_parser.add_argument("reason", type=str, help="Reason of absence")
-   
-    # add designation
-    designation_parser = subparsers.add_parser("designation", help="Add designation      to database")
-    designation_parser.add_argument("name", type=str, help="Name of designation")
-    designation_parser.add_argument("percentage", type=int, help="Percentage of employee in designation")
-    designation_parser.add_argument("leaves", type=str, help="Total no. of leaves")
-    
+    #leave summery
+    leave_summery=subparsers.add_parser("count",help="find count of leaves")
+    leave_summery.add_argument("employee_id", type=int, help="Employee id of absentee")
+        
     parser.add_argument("-i","--input_type",help="Specify the data source",choices=['file','db'],required=True)
     parser.add_argument("-v", "--verbose", help="Print detailed logging", action='store_true', default=False)
     parser.add_argument("-n", "--number", help="Number of records to generate", action='store', type=int, default=10)
@@ -141,20 +138,60 @@ Phone       : {phone}""")
         print (f"\n{vcard}")
     con.close()
 
-def insert_designation(args):
+def insert_leaves(args):
     con=psycopg2.connect(dbname=args.dbname)
     cur=con.cursor()
+    psql="SELECT id FROM leaves WHERE employee = %s AND date = %s;"
+    cur.execute(psql,(args.employee_id,args.date))
+    exists=cur.fetchone()
+    if exists:
+        logger.error(f"Employee already taken leave on {args.date}")
+        exit()
+    psql="""   SELECT e.fname,e.lname,d.total_no_of_leaves, COUNT(l.employee) AS count
+FROM employees e
+JOIN leaves l ON e.employee_id = l.employee
+JOIN designation d ON d.designation_id =e.title_id
+WHERE l.employee =%s
+GROUP BY e.fname,e.lname,d.total_no_of_leaves;"""
+    cur.execute(psql,(args.employee_id,))
+    data=cur.fetchall()
+    for fname,lname,total_leave,count in data:
+        if total_leave==count:
+            logger.warning(f"Mr/Mrs.{fname} {lname} You can't able to take no more leave,Your leave is Finished")
+            exit()
     try:
-        psql="insert into designation(designation_name,percentage_of_employees,total_no_of_leaves) values(%s,%s,%s)"
-        cur.execute(psql,(args.name,args.percentage,args.leaves))
+        psql="insert into leaves(date,employee,reason) values(%s,%s,%s)"
+        cur.execute(psql,(args.date,args.employee_id,args.reason))
         con.commit()
-        print("Designation details inserted ")
+        print("Leave details inserted ")
     except:
         con.rollback()
-        print("Designation details not inserted ")
+        print("Leave details not inserted ")
     finally:
         cur.close()
-        con.close() 
+        con.close()
+def count_of_leaves(args):
+    con=psycopg2.connect(dbname=args.dbname)
+    cur=con.cursor()
+    
+    psql='''SELECT e.fname, e.lname, d.designation_name, d.total_no_of_leaves, COUNT(l.employee) AS count
+FROM employees e
+JOIN leaves l ON e.employee_id = l.employee
+JOIN designation d ON d.designation_id =e.title_id
+WHERE l.employee =%s
+GROUP BY e.fname, e.lname, d.designation_name, d.total_no_of_leaves;
+'''
+    cur.execute(psql,(args.employee_id,))
+    data=cur.fetchall()
+    for fname,lname,desig,total_leave,count in data:
+        remainig=total_leave-count
+        print(f'''Employee name   :{fname}{lname}
+Designation   :{desig}
+Total leaves   :{total_leave}
+Leaves tacken  :{count}
+Remaining leave :{remainig}
+''')
+    con.close()
 
 def main():
     try:
@@ -163,8 +200,8 @@ def main():
         ops = {"initdb" : initialize_db,
                 "import" : handle_import,
                 "query" : fetch_from_db,
-               
-                "designation" : insert_designation,
+                "leave" : insert_leaves, 
+                "count": count_of_leaves
                
                 }
         
