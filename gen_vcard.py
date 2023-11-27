@@ -35,6 +35,9 @@ def parse_args():
     #leave summery
     leave_summery=subparsers.add_parser("count",help="find count of leaves")
     leave_summery.add_argument("employee_id", type=int, help="Employee id of absentee")
+    # export leave summary
+    parser_export = subparsers.add_parser("export", help="Export leave summary")
+    parser_export.add_argument("directory", help="Directory to export leave summary")
         
     parser.add_argument("-i","--input_type",help="Specify the data source",choices=['file','db'],required=True)
     parser.add_argument("-v", "--verbose", help="Print detailed logging", action='store_true', default=False)
@@ -192,6 +195,41 @@ Leaves tacken  :{count}
 Remaining leave :{remainig}
 ''')
     con.close()
+def export_leave_summary(args):
+    con=psycopg2.connect(dbname=args.dbname)
+    cur=con.cursor()
+    
+    psql='''SELECT e.fname, e.lname, d.designation_name, d.total_no_of_leaves, COUNT(l.employee) AS leaves_taken
+FROM employees e
+LEFT JOIN leaves l ON e.employee_id = l.employee
+JOIN designation d ON e.title_id = d.designation_id 
+GROUP BY e.fname, e.lname, d.designation_name, d.total_no_of_leaves;
+'''
+    try:
+        cur.execute(psql)
+        data=cur.fetchall()
+        directory=args.directory
+        os.makedirs(directory,exist_ok=True)
+        with open(os.path.join(directory,'leave_summary.csv'),'w',newline='') as csvfille:
+            fieldnames=['First Name','Last Name','Designation','Total Leaves','Leaves Taken','Leaves Remaining']
+            writer=csv.DictWriter(csvfille,fieldnames=fieldnames)
+            writer.writeheader()
+            for item in data:
+                fname,lname,designation_name,total_no_of_leaves,leaves_taken =item
+                leaves_remain=total_no_of_leaves-leaves_taken
+                writer.writerow({
+                    'First Name':fname,
+                    'Last Name':lname,
+                    'Designation':designation_name,
+                    'Total Leaves':total_no_of_leaves,
+                    'Leaves Taken':leaves_taken,
+                    'Leaves Remaining':leaves_remain})
+            print(f"Summary exported to folder {os.path.join(directory,'leaves_summary.csv')}")
+    except psycopg2.Error as e:
+        print(f"Failed to export data:{e}")
+        cur.close()
+        con.close()
+            
 
 def main():
     try:
@@ -201,8 +239,8 @@ def main():
                 "import" : handle_import,
                 "query" : fetch_from_db,
                 "leave" : insert_leaves, 
-                "count": count_of_leaves
-               
+                "count": count_of_leaves,
+                "export":export_leave_summary
                 }
         
         ops[args.op](args)
