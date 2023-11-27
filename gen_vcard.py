@@ -11,7 +11,7 @@ class HRException(Exception):pass
 logger=False
 
 def parse_args():
-    parser=argparse.ArgumentParser(prog="gen_vcard.py",description="Generates sample names")
+    parser=argparse.ArgumentParser(prog="gen_vcard.py",description="Employee information manager for a small company.")
     # parser.add_argument("ipfile",help="Name of the input file")
     # parser.add_argument("opfile",help="Name of the output file")
     parser.add_argument("-b","--dbname",help="Name of the database",default='HRmgt')
@@ -38,13 +38,12 @@ def parse_args():
     # export leave summary
     parser_export = subparsers.add_parser("export", help="Export leave summary")
     parser_export.add_argument("directory", help="Directory to export leave summary")
-        
+ 
     parser.add_argument("-i","--input_type",help="Specify the data source",choices=['file','db'],required=True)
     parser.add_argument("-v", "--verbose", help="Print detailed logging", action='store_true', default=False)
     parser.add_argument("-n", "--number", help="Number of records to generate", action='store', type=int, default=10)
     parser.add_argument("-d", "--dimension", help="Change dimension of QRCODE", default=200 )
     parser.add_argument("-q", "--add_qr", help="Generate QRCODE of each record",action='store_true',default=False)
-    parser.add_argument("-a", "--address", help="Change into new address",type=str, default="100 Flat Grape Dr.;Fresno;CA;95555;United States of America")
     args=parser.parse_args()
     return args
 
@@ -94,143 +93,155 @@ def create_qr_code(row,vcard,args):
                 logger.info(f"Created QR code: {qr_path}")
         else:
             logger.warning(f"No write access to directory: {args.opfile}")
-           
+         
 def initialize_db(args):
     with open("data/init.sql") as f:
         sql=f.read()
         logger.debug(sql)
     try:
-        con=psycopg2.connect(dbname=args.dbname)
-        cur=con.cursor()
-        cur.execute(sql)
-        con.commit()
-        logger.info('Database intialized successfully')
+        with psycopg2.connect(dbname=args.dbname) as con:
+            with con.cursor() as cur: 
+                cur.execute(sql)
+                con.commit()
+                logger.info('Database intialized successfully')
     except psycopg2.OperationalError as e:
         raise HRException(f"Database '{args.dbname}' doesn't exist")
      
 def handle_import(args):
-    con=psycopg2.connect(dbname=args.dbname)
-    cur=con.cursor()
-    cur.execute("truncate table employees restart identity cascade")
     try:
-        with open(args.employees_file) as f:
-            reader=csv.reader(f)
-            for row in reader:
-                psql="insert into employees(fname,lname,title,email,phone) values(%s,%s,%s,%s,%s)"
-                cur.execute(psql,row[:5])
-        con.commit()
-        print("Values inserted ")
-    except:
+        with psycopg2.connect(dbname=args.dbname) as con:
+            with con.cursor() as cur: 
+                cur.execute("truncate table employees restart identity cascade")
+                with open(args.employees_file) as f:
+                    reader=csv.reader(f)
+                    for row in reader:
+                        psql="insert into employees(fname,lname,title,email,phone) values(%s,%s,%s,%s,%s)"
+                        cur.execute(psql,row[:5])
+                        con.commit()
+                cur.close()
+                logging.info("Values inserted ")
+    except psycopg2.Error as e:
+        logging.info(f"Database error: {e}")
         con.rollback()
-        print("Values not inserted ")
+        logging.info("Values not inserted ")
     finally:
-        cur.close()
         con.close() 
 def fetch_from_db(args):
-    con=psycopg2.connect(dbname=args.dbname)
-    cur=con.cursor()
-    query=f"select e.fname, e.lname, e.email, e.phone,d.designation_name  from employees e  INNER JOIN designation d ON e.title_id = d.designation_id where e.employee_id={args.id}"
-    cur.execute(query)
-    fname, lname, email, phone ,designation= cur.fetchone()
-    print (f"""Name        : {fname} {lname}
-Designation : {designation}
-Email       : {email}
-Phone       : {phone}""")
-    if (args.vcard):
-        vcard = generate_vcard(lname, fname, designation, email, phone)
-        print (f"\n{vcard}")
-    con.close()
+    try:
+        with psycopg2.connect(dbname=args.dbname) as con:
+            with con.cursor() as cur:        
+                query=f"select e.fname, e.lname, e.email, e.phone,d.designation_name  from employees e  INNER JOIN designation d ON e.title_id = d.designation_id where e.employee_id={args.id}"
+                cur.execute(query)
+                fname, lname, email, phone ,designation= cur.fetchone()
+                print (f"""Name        : {fname} {lname}
+            Designation : {designation}
+            Email       : {email}
+            Phone       : {phone}""")
+                if (args.vcard):
+                    vcard = generate_vcard(lname, fname, designation, email, phone)
+                    print (f"\n{vcard}")
+    except psycopg2.Error as e:
+                logging.info(f"Database error: {e}")
+    finally:
+        con.close()
 
 def insert_leaves(args):
-    con=psycopg2.connect(dbname=args.dbname)
-    cur=con.cursor()
-    psql="SELECT id FROM leaves WHERE employee = %s AND date = %s;"
-    cur.execute(psql,(args.employee_id,args.date))
-    exists=cur.fetchone()
-    if exists:
-        logger.error(f"Employee already taken leave on {args.date}")
-        exit()
-    psql="""   SELECT e.fname,e.lname,d.total_no_of_leaves, COUNT(l.employee) AS count
-FROM employees e
-JOIN leaves l ON e.employee_id = l.employee
-JOIN designation d ON d.designation_id =e.title_id
-WHERE l.employee =%s
-GROUP BY e.fname,e.lname,d.total_no_of_leaves;"""
-    cur.execute(psql,(args.employee_id,))
-    data=cur.fetchall()
-    for fname,lname,total_leave,count in data:
-        if total_leave==count:
-            logger.warning(f"Mr/Mrs.{fname} {lname} You can't able to take no more leave,Your leave is Finished")
-            exit()
     try:
-        psql="insert into leaves(date,employee,reason) values(%s,%s,%s)"
-        cur.execute(psql,(args.date,args.employee_id,args.reason))
-        con.commit()
-        print("Leave details inserted ")
-    except:
+        with psycopg2.connect(dbname=args.dbname) as con:
+            with con.cursor() as cur: 
+                psql="SELECT id FROM leaves WHERE employee = %s AND date = %s;"
+                cur.execute(psql,(args.employee_id,args.date))
+                exists=cur.fetchone()
+                if exists:
+                    logger.warning(f"Employee already taken leave on {args.date}")
+                    return
+                psql="""   SELECT e.fname,e.lname,d.total_no_of_leaves, COUNT(l.employee) AS count
+                FROM employees e
+                left JOIN leaves l ON e.employee_id = l.employee
+                JOIN designation d ON e.title_id=d.designation_id 
+                WHERE l.employee =%s
+                GROUP BY e.fname,e.lname,d.total_no_of_leaves;"""
+                cur.execute(psql,(args.employee_id,))
+                data=cur.fetchall()
+                if data==[]:
+                    psql="insert into leaves(date,employee,reason) values(%s,%s,%s)"
+                    cur.execute(psql,(args.date,args.employee_id,args.reason))
+                    con.commit()
+                    logger.info("Leave details inserted ")
+                else:
+                    for fname,lname,total_leave,count in data:
+                        if total_leave==count:
+                            logger.warning(f"Mr/Mrs.{fname} {lname} You can't able to take no more leave,Your leave is Finished")
+                        return
+    except psycopg2.Error as e:
+        logger.info(f"Database error: {e}")
         con.rollback()
-        print("Leave details not inserted ")
+        logger.info("Leave details not inserted ")
     finally:
         cur.close()
         con.close()
 def count_of_leaves(args):
-    con=psycopg2.connect(dbname=args.dbname)
-    cur=con.cursor()
-    
-    psql='''SELECT e.fname, e.lname, d.designation_name, d.total_no_of_leaves, COUNT(l.employee) AS count
-FROM employees e
-JOIN leaves l ON e.employee_id = l.employee
-JOIN designation d ON d.designation_id =e.title_id
-WHERE l.employee =%s
-GROUP BY e.fname, e.lname, d.designation_name, d.total_no_of_leaves;
-'''
-    cur.execute(psql,(args.employee_id,))
-    data=cur.fetchall()
-    for fname,lname,desig,total_leave,count in data:
-        remainig=total_leave-count
-        print(f'''Employee name   :{fname}{lname}
-Designation   :{desig}
-Total leaves   :{total_leave}
-Leaves tacken  :{count}
-Remaining leave :{remainig}
-''')
-    con.close()
-def export_leave_summary(args):
-    con=psycopg2.connect(dbname=args.dbname)
-    cur=con.cursor()
-    
-    psql='''SELECT e.fname, e.lname, d.designation_name, d.total_no_of_leaves, COUNT(l.employee) AS leaves_taken
-FROM employees e
-LEFT JOIN leaves l ON e.employee_id = l.employee
-JOIN designation d ON e.title_id = d.designation_id 
-GROUP BY e.fname, e.lname, d.designation_name, d.total_no_of_leaves;
-'''
     try:
-        cur.execute(psql)
-        data=cur.fetchall()
-        directory=args.directory
-        os.makedirs(directory,exist_ok=True)
-        with open(os.path.join(directory,'leave_summary.csv'),'w',newline='') as csvfille:
-            fieldnames=['First Name','Last Name','Designation','Total Leaves','Leaves Taken','Leaves Remaining']
-            writer=csv.DictWriter(csvfille,fieldnames=fieldnames)
-            writer.writeheader()
-            for item in data:
-                fname,lname,designation_name,total_no_of_leaves,leaves_taken =item
-                leaves_remain=total_no_of_leaves-leaves_taken
-                writer.writerow({
-                    'First Name':fname,
-                    'Last Name':lname,
-                    'Designation':designation_name,
-                    'Total Leaves':total_no_of_leaves,
-                    'Leaves Taken':leaves_taken,
-                    'Leaves Remaining':leaves_remain})
-            print(f"Summary exported to folder {os.path.join(directory,'leaves_summary.csv')}")
+        with psycopg2.connect(dbname=args.dbname) as con:
+            with con.cursor() as cur: 
+                psql='''SELECT e.fname, e.lname, d.designation_name, d.total_no_of_leaves, COUNT(l.employee) AS count
+                    FROM employees e
+                    JOIN leaves l ON e.employee_id = l.employee
+                    JOIN designation d ON d.designation_id =e.title_id
+                    WHERE l.employee =%s
+                    GROUP BY e.fname, e.lname, d.designation_name, d.total_no_of_leaves;
+                    '''
+                cur.execute(psql,(args.employee_id,))
+                data=cur.fetchall()
+                for fname,lname,desig,total_leave,count in data:
+                    remainig=total_leave-count
+                    print(f'''Employee name   :{fname}{lname}
+                Designation   :{desig}
+                Total leaves   :{total_leave}
+                Leaves taken  :{count}
+                Remaining leave :{remainig}
+                ''')
+    except psycopg2.Error as e:
+         logging.info(f"Database error: {e}")
+    finally:
+        cur.close()
+        con.close()   
+
+def export_leave_summary(args):
+    try:
+        with psycopg2.connect(dbname=args.dbname) as con:
+            with con.cursor() as cur:   
+                psql='''SELECT e.fname, e.lname, d.designation_name, d.total_no_of_leaves, COUNT(l.employee) AS leaves_taken
+            FROM employees e
+            LEFT JOIN leaves l ON e.employee_id = l.employee
+            JOIN designation d ON e.title_id = d.designation_id 
+            GROUP BY e.fname, e.lname, d.designation_name, d.total_no_of_leaves;
+            '''
+                cur.execute(psql)
+                data=cur.fetchall()
+                directory=args.directory
+                os.makedirs(directory,exist_ok=True)
+                with open(os.path.join(directory,'leave_summary.csv'),'w',newline='') as csvfille:
+                    fieldnames=['First Name','Last Name','Designation','Total Leaves','Leaves Taken','Leaves Remaining']
+                    writer=csv.DictWriter(csvfille,fieldnames=fieldnames)
+                    writer.writeheader()
+                    for item in data:
+                        fname,lname,designation_name,total_no_of_leaves,leaves_taken =item
+                        leaves_remain=total_no_of_leaves-leaves_taken
+                        writer.writerow({
+                            'First Name':fname,
+                            'Last Name':lname,
+                            'Designation':designation_name,
+                            'Total Leaves':total_no_of_leaves,
+                            'Leaves Taken':leaves_taken,
+                            'Leaves Remaining':leaves_remain})
+                    print(f"Summary exported to folder {os.path.join(directory,'leaves_summary.csv')}")
     except psycopg2.Error as e:
         print(f"Failed to export data:{e}")
+    finally:
         cur.close()
         con.close()
             
-
 def main():
     try:
         args = parse_args()
