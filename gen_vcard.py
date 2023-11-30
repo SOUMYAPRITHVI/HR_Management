@@ -9,7 +9,9 @@ import shutil
 import configparser
 import psycopg2 
 import requests
+import sqlalchemy as sa
 
+import db
 
 class HRException(Exception):pass
 
@@ -116,31 +118,24 @@ def create_qr_code(vcard,args,row):
             # logger.warning(f"No write access to directory: {args.opfile}")
          
 def initialize_db(args):
-    update_config(args.dbname)
-    with open("data/init.sql") as f:
-        sql=f.read()
-        logger.debug(sql)
-    try:
-        with psycopg2.connect(dbname=args.dbname) as con:
-            with con.cursor() as cur: 
-                cur.execute(sql)
-                con.commit()
-                logger.info('Database intialized successfully')
-    except psycopg2.OperationalError as e:
-        raise HRException(f"Database '{args.dbname}' doesn't exist")
+    db_uri = f"postgresql:///{args.dbname}"
+    db.create_all(db_uri)
+    session =db.get_session(db_uri)
+    d1 = db.Designation(title="CEO",max_leaves=20)
+    d2 = db.Designation(title="Engineer",max_leaves=20)
+    session.add(d1)
+    session.add(d2)
+    session.commit()
      
 def handle_import(args):
     try:
-        with psycopg2.connect(dbname=args.dbname) as con:
-            with con.cursor() as cur: 
-                cur.execute("truncate table employees restart identity cascade")
-                with open(args.employees_file) as f:
-                    reader=csv.reader(f)
-                    for row in reader:
-                        psql="insert into employees(fname,lname,title,email,phone) values(%s,%s,%s,%s,%s)"
-                        cur.execute(psql,row[:5])
-                        con.commit()
-                cur.close()
+        db_uri = f"postgresql:///{args.dbname}"
+        session = db.get_session(db_uri)
+        with open(args.employees_file) as f:
+            reader=csv.reader(f)
+            for lname, fname, title, email, phone in reader:
+                psql=sa.select(db.Designation).where(db.Designation.title==title)
+                designation = session.execute(psql).scalar_one()
                 logging.info("Values inserted ")
     except psycopg2.Error as e:
         logging.info(f"Database error: {e}")
