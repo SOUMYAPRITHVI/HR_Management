@@ -2,7 +2,7 @@
 
 ## Overview
 
-This script converts data from table to individual vCards (VCF format) and QR codes in png format for each person and organizes them in a user-specified folder.
+This script converts data from table(use SQLAlchemy) to individual vCards (VCF format) and QR codes in png format for each person and organizes them in a user-specified folder.
 
 ## Features
 
@@ -25,10 +25,16 @@ This script converts data from table to individual vCards (VCF format) and QR co
 
 - `python3 gen_vcard.py names.csv V_card -i db initdb` -Initialise the database.
 
+-`python3 gen_vcard.py --dbname newhr initdb`Initialise the database(using config).
+
 - `python3 gen_vcard.py -i db import names.csv` -Import entries from the CSV file
 
 - `python3 gen_vcard.py -i db query 10` -Get information for a single employee
 
-- `python3 gen_vcard.py -i db query 11 --vcard` -Get information for a single employee with vcard
+- ` python3 gen_vcard.py query 12 --displayvcard ` -Get information for a single employee with vcard
+
+- `python3 gen_vcard.py query --displayvcard 12 -q --opfile newtest1` -Get information for a single employee 
+
+   with vcard and qr code
 
 
