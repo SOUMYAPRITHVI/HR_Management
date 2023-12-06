@@ -11,7 +11,8 @@ import psycopg2
 import requests
 import sqlalchemy as sa
 
-import db
+import models
+import web
 
 class HRException(Exception):pass
 
@@ -29,6 +30,8 @@ def parse_args():
     # subcommand initdb
     subparsers = parser.add_subparsers(dest="op")
     subparsers.add_parser("initdb", help="Initialise the database")
+
+    web_parser = subparsers.add_parser("web", help="Start web server")
     # import csv
     import_parser = subparsers.add_parser("import", help="Import data from csv file")
     import_parser.add_argument("employees_file", help="List of employees to import")
@@ -113,58 +116,63 @@ def create_qr_code(fname,lname,vcard,args):
 
 def initialize_db(args):
     db_uri = f"postgresql:///{args.dbname}"
-    db.create_all(db_uri)
-    session = db.get_session(db_uri)
-    d1 = db.Designation(title = "Staff Engineer", max_leaves = 10)
-    d2 = db.Designation(title = "Tech Lead", max_leaves = 20)
-    d3 = db.Designation(title = "Project Manager", max_leaves = 40)
-    d4 = db.Designation(title = "Senior Engineer", max_leaves = 15)
-    d5 = db.Designation(title = "Junior Engineer", max_leaves = 15)
-    session.add(d1)
-    session.add(d2)
-    session.add(d3)
-    session.add(d4)
-    session.add(d5)
-    session.commit()
+    models.create_all(db_uri)
+    session = models.get_session(db_uri)
+    exist_designation=session.query(models.Designation).first()
+    if not exist_designation:
+        d1 = models.Designation(title = "Staff Engineer", max_leaves = 10)
+        d2 = models.Designation(title = "Tech Lead", max_leaves = 20)
+        d3 = models.Designation(title = "Project Manager", max_leaves = 40)
+        d4 = models.Designation(title = "Senior Engineer", max_leaves = 15)
+        d5 = models.Designation(title = "Junior Engineer", max_leaves = 15)
+        session.add(d1)
+        session.add(d2)
+        session.add(d3)
+        session.add(d4)
+        session.add(d5)
+        session.commit()
 def handle_import(args):
     db_uri = f"postgresql:///{args.dbname}"
-    session = db.get_session(db_uri)
-    with open(args.employees_file) as f:
-        reader = csv.reader(f)  
-        for lname, fname, title, email, phone in reader:
-            designation = session.query(db.Designation).filter(db.Designation.title == title).first()
-            try:
-                if designation:
-                    logger.info("Inserting %s", email)
-                    employee = db.Employee(
-                        lname=lname,
-                        fname=fname,
-                        title=designation,
-                        email=email,
-                        phone=phone
-                    )
-                    session.add(employee)
-                else:
-                    logger.warning(f"Value is not inserted: {email}")
-            except Exception as e:
-                logger.error("Already exits this email" )
-        session.commit()
+    session = models.get_session(db_uri)
+    exist_employee=session.query(models.Employee).first()
+    if not exist_employee:
+        with open(args.employees_file) as f:
+            reader = csv.reader(f)  
+            for lname, fname, title, email, phone in reader:
+                designation = session.query(models.Designation).filter(models.Designation.title == title).first()
+                try:
+                    if designation:
+                        logger.info("Inserting %s", email)
+                        employee = models.Employee(
+                            lname=lname,
+                            fname=fname,
+                            title=designation,
+                            email=email,
+                            phone=phone
+                        )
+                        session.add(employee)
+                    else:
+                        logger.warning(f"Value is not inserted: {email}")
+                except Exception as e:
+                    logger.error("Already exits this email" )
+            session.commit()
+    
 def insert_leaves(args):
     db_uri = f"postgresql:///{args.dbname}"
-    session = db.get_session(db_uri)
+    session = models.get_session(db_uri)
     date=args.date
     employee_id=args.employee_id
     reason=args.reason
-    leave=db.Leave(date=date,employee_id=employee_id,reason=reason)
+    leave=models.Leave(date=date,employee_id=employee_id,reason=reason)
     session.add(leave)
     session.commit()
     logger.info("Leave added for Employee Id %s on %s with reason:%s",employee_id,date,reason)
 
 def get_single_vcard(args):
     db_uri = f"postgresql:///{args.dbname}"
-    session = db.get_session(db_uri)
+    session = models.get_session(db_uri)
     employee_id = int(args.id)  # Convert the ID to an integer
-    employee=session.query(db.Employee).filter(db.Employee.id==args.id).first()
+    employee=session.query(models.Employee).filter(models.Employee.id==args.id).first()
     if employee:
         vcard = create_vcard(employee.fname,employee.lname,employee.title.title,employee.email,employee.phone, args.address)
         if vcard:
@@ -196,12 +204,12 @@ def get_single_vcard(args):
         logger.error("Employee with ID %s not found", employee_id) 
 def count_of_leaves(args):
     db_uri = f"postgresql:///{args.dbname}"
-    session = db.get_session(db_uri)
+    session = models.get_session(db_uri)
     employee_id = int(args.employee_id)  # Convert the ID to an integer
-    employee=session.query(db.Employee).filter(db.Employee.id==employee_id).first()
+    employee=session.query(models.Employee).filter(models.Employee.id==employee_id).first()
     if employee:
         total_leaves=employee.title.max_leaves
-        leaves_taken=session.query(db.Leave).filter(db.Leave.employee_id==employee_id).count()
+        leaves_taken=session.query(models.Leave).filter(models.Leave.employee_id==employee_id).count()
         leaves_remaining = total_leaves - leaves_taken
         print(f'''Employee name     :{employee.fname} {employee.lname}
 Designation       :{employee.title.title}
@@ -213,8 +221,8 @@ Remaining leave   :{leaves_remaining}
         logger.error("Employee with ID %s not found", employee_id)
 def export_leave_summary(args):
     db_uri = f"postgresql:///{args.dbname}"
-    session = db.get_session(db_uri)
-    employees=session.query(db.Employee).all()
+    session = models.get_session(db_uri)
+    employees=session.query(models.Employee).all()
     directory=args.directory
     os.makedirs(directory,exist_ok=True)
     with open(os.path.join(directory,'leave_summary.csv'),'w',newline='') as csvfille:
@@ -223,7 +231,7 @@ def export_leave_summary(args):
         writer.writeheader()
         for employee in employees:
             total_leaves=employee.title.max_leaves
-            leaves_taken=session.query(db.Leave).filter(db.Leave.employee_id==employee.id).count()
+            leaves_taken=session.query(models.Leave).filter(models.Leave.employee_id==employee.id).count()
             leaves_remain = total_leaves - leaves_taken
             writer.writerow({
                             'First Name':employee.fname,
@@ -245,8 +253,8 @@ def clear_output_dir(args):
 
 def create_vcard_from_db(args):
     db_uri = f"postgresql:///{args.dbname}"
-    session = db.get_session(db_uri)
-    employees=session.query(db.Employee).all()
+    session = models.get_session(db_uri)
+    employees=session.query(models.Employee).all()
     if employees:
         count=1
         if not os.path.exists(args.opfile):
@@ -270,7 +278,11 @@ def create_vcard_from_db(args):
                 logger.info( clear_output_dir(args))
             else:
                 logger.info("Output directory not removed" )
-    
+def handle_web(args):
+    web.app.config["SQLALCHEMY_DATABASE_URI"]=f"postgresql:///{args.dbname}"
+    web.db.init_app(web.app)
+    web.app.run()
+
 def main():
     try:
         args = parse_args()
@@ -281,7 +293,8 @@ def main():
                 "vcard" : create_vcard_from_db,
                 "leave" : insert_leaves, 
                 "count": count_of_leaves,
-                "export":export_leave_summary
+                "export":export_leave_summary,
+                "web"    : handle_web,
             }
         
         ops[args.op](args)       

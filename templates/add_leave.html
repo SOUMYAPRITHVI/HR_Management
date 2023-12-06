@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block content2 %}
+
+    <h1>Add Leave Details</h1>
+    <p>
+      <form method="post" action="{{url_for('add_leaves', empid=empid)}}">
+        <label for="leave_date">Leave Date</label>
+        <input type="date" id="leavedate" name="leavedate"><br><br>
+        <label for="leave_reason">Leave Reason</label>
+        <input type="text" id="leavereason" name="leavereason"><br><br>
+        <input type="submit" value="Submit">
+        
+    </form>
+    </p>
+    <a href="{{url_for('employee_details', empid=empid)}}">Back to employee datails </a>
+    
+{% endblock %}
+
