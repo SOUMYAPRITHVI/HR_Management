@@ -1,19 +1,25 @@
 {% extends 'base.html' %}
 
-{% block content1 %}
-{% with messages = get_flashed_messages() %}
-  {% if messages %}
-  <h3>{{messages[0]}}</h3>
-
-  {%endif%}
-
-{%endwith%}
-    <h1> List of employees </h1>
-    <p>
+{% block content %}
+<div class = "container-fluid">
+  <div class = "row">
+    <div class = "col-5">
+    <h1>List of employees</h1>
+    <div style= "height: 735px; overflow: scroll;">
+     <p>
       <ol>
         {%for u in users %}
-        <li> <a href="{{url_for('employee_details', empid=u.id)}}">{{u.fname}} </a></li>
+        <li>  <a class="userlink" href="{{url_for('employee_details', empid=u.id)}}">{{u.fname}} </a></li>
         {%endfor%}
       </ol>
     </p>
+    </div>
+    </div>
+    <div class="col-7">
+    <p id="userdetails">
+    </p>
+  </div>
+  </div>
+  </div>
 {% endblock %}
+

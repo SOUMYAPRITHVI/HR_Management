@@ -16,3 +16,68 @@
     
 {% endblock %}
 
+!-- {% with messages = get_flashed_messages() %}
+  {% if messages %}
+  <h3>{{messages[0]}}</h3>
+
+  {%endif%} 
+
+{%endwith%} -->
+<!-- {%block content1 %}
+<ol>
+  <h1>List of Employees</h1>
+  {%for u in users %}
+  <li> <a class="userlink1" href="{{url_for('employee_details', empid=u.id)}}">{{u.fname}} </a></li>
+  {%endfor%}
+</ol>
+
+{%endblock %} -->
+
+<!-- {% block content2 %}
+    <h1> Details for {{user.fname}}  {{user.lname}}</h1>
+    <h2> {{user.title.title}} </h2>
+    <table >
+      <tr>
+        <th width="200"> First name :</th>
+        <td width="275"> {{user.fname}}</td>
+      </tr>
+      <tr>
+        <th> Last name :</th>
+        <td> {{user.lname}}</td>
+      </tr>
+      <tr>
+        <th> Email :</th>
+        <td> {{user.email}}</td>
+      </tr>
+      <tr>
+        <th> Phone :</th>
+        <td> {{user.phone}}</td>
+      </tr>
+      <tr>
+        <th >  Leave taken : </th>
+        <td > {{leave}}</td>
+      </tr>
+      <tr>
+        <th> Maximum leave allowed : </th>
+        <td> {{user.title.max_leaves}}</td>
+      </tr>
+      <tr>
+        <th>  Remaining leaves : </th>
+        <td> {{user.title.max_leaves-leave}}</td>
+      </tr>
+     
+    </table>
+    <br><br>
+    <h1>Add Leave Details</h1>
+    <p>
+      <form method="post" action="{{url_for('employee_details', empid=user.id)}} ">
+        <label for="leave_date">Leave Date</label>
+        <input type="date" id="leavedate" name="leavedate"><br><br>
+        <label for="leave_reason">Leave Reason</label>
+        <input type="text" id="leavereason" name="leavereason"><br><br>
+        <input type="submit" value="Submit">
+        
+    </form>
+    </p>
+   
+{% endblock %} -->
