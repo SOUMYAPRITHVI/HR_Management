@@ -37,4 +37,6 @@ This script converts data from table(use SQLAlchemy) to individual vCards (VCF f
 
    with vcard and qr code
 
+- `python3 gen_vcard.py web` -Get information as json api format and pass it to frontend
+
 
