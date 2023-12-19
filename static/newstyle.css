@@ -1,0 +1,59 @@
+body
+{
+    
+    background-color: rgb(3, 39, 71);
+    background-size: 100% 100%;
+    background-attachment: fixed;
+}
+.navbar-brand{
+    color:  rgb(3, 39, 71);
+}
+.userlink
+{
+    color: white;
+}
+h1
+{
+    color: white;
+}
+h3
+{
+    color: white;
+}
+ol
+{
+    color: white;
+}
+table,th,td
+{
+    border: 1px solid;
+    color: white;
+}
+label
+{
+    font-size: medium;
+    width: 15%;
+    color: white;
+}
+input
+{
+    font-size: medium;
+    width: 25%;
+}
+input[type=submit]
+{
+    font-size: medium;
+    align-items: center;
+    width: 25%;
+}
+span.info {
+    font-size: 25pt;
+    }
+p.info {
+    color: blue;
+    }
+.nav-link
+{
+    float: right;
+    color: #9b0808;
+}
