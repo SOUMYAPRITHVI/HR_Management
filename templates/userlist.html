@@ -1,25 +1,28 @@
-{% extends 'base.html' %}
 
+
+{% extends 'base.html' %}
 {% block content %}
-<div class = "container-fluid">
-  <div class = "row">
-    <div class = "col-5">
-    <h1>List of employees</h1>
-    <div style= "height: 735px; overflow: scroll;">
-     <p>
+    <div class="employee-details-container d-flex  justify-content-between">
+      <div class="col-4">
+      <span class="info"></span>
+      <h1 class="mb-4"> List of Employees</h1>
       <ol>
         {%for u in users %}
         <li>  <a class="userlink" href="{{url_for('employee_details', empid=u.id)}}">{{u.fname}} </a></li>
+        <!-- <li class="user-link-li">  <a class="userlink" href="{{url_for('employee_details', empid=u.id)}}">{{u.fname}}</a></li> -->
         {%endfor%}
       </ol>
-    </p>
+      </div>
+      <div class="user-details-container">
+      <div class="col-8">
+        <div id="root"></div>
+      </div>
+      </div>
     </div>
-    </div>
-    <div class="col-7">
-    <p id="userdetails">
-    </p>
-  </div>
-  </div>
-  </div>
 {% endblock %}
+
+
+
+
+
 
