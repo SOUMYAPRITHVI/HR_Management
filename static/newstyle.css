@@ -16,7 +16,7 @@ h1
 {
     color: white;
 }
-h2
+h3
 {
     color: white;
 }
@@ -52,3 +52,8 @@ span.info {
 p.info {
     color: blue;
     }
+.nav-link
+{
+    float: right;
+    color: #9b0808;
+}
