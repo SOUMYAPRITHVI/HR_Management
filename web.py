@@ -1,7 +1,7 @@
 import flask
 from flask_cors import CORS
 import models
-from flask import request, url_for, redirect, render_template
+from flask import request,render_template
 from sqlalchemy.sql import func
 
 app =flask.Flask("hrms")
@@ -29,7 +29,7 @@ def employees():
         }
         emps.append(ret)
     return flask.jsonify(emps)
-    # return render_template("userlist.html", users = users)
+  
 
 @app.route("/employees/<int:empid>")
 def employee_details(empid):
@@ -60,29 +60,30 @@ def addleave(empid):
     query2 = db.select(models.Designation.max_leaves).where(models.Designation.id == models.Employee.title_id)
     max_leaves = db.session.execute(query2).scalar()
     if int(leave) <= int(max_leaves) -1 :
-        if request.method == "POST":
-            data = request.get_json()
-            date = data.get('date')
-            reason = data.get('reason')
-            if not date or not reason:
-                return flask.jsonify({'error': 'Enter data'}), 400
-            insert_data = models.Leave(employee_id=empid ,date=date, reason=reason)
-            db.session.add(insert_data)
-            db.session.commit()
-            return flask.jsonify({'message': 'Leave submitted successfully'}), 200
-        return flask.jsonify({'error': 'Method Not Allowed'}), 405
+        try:
+            if request.method == "POST":
+                data = request.get_json()
+                date = data.get('date')
+                reason = data.get('reason')
+                insert_data = models.Leave(employee_id=empid ,date=date, reason=reason)
+                db.session.add(insert_data)
+                db.session.commit()
+                return flask.jsonify({'message': 'Leave added successfully'})
+        except:
+            db.session.rollback()
+            return flask.jsonify({'message': 'Leave already taken in this date'}),403
     else :
-        return flask.jsonify({'error': 'leaves exceeds maximum number of leaves'}), 405
+        return flask.jsonify({'error': 'maximum number of leaves exceeds '}), 405
   
 
 
 @app.errorhandler(404)
 def not_found_error(error):
-    return render_template('404.html'), 404
+    return flask.jsonify({'error': 'Page not found'}), 404
 
 @app.errorhandler(500)
 def internal_server_error(error):
-    return render_template('500.html'), 500
+    return flask.jsonify({'error': 'page'}), 200
 
 
 @app.route("/about")
