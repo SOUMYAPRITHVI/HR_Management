@@ -3,7 +3,8 @@ Flask based web application for managing human resource
 
 ## Overview
 
--This script converts data from table(use SQLAlchemy) to individual vCards (VCF format) and QR codes in png format for each person and organizes them in a user-specified folder.
+-This script converts data from table(use SQLAlchemy) to individual vCards (VCF format) and QR codes in png format for each    
+ person and organizes them in a user-specified folder.
 -Then changed it to web application to handle frontend as reactJS
 
 
@@ -22,7 +23,7 @@ Flask based web application for managing human resource
 
 1. Clone the repository:
 
-   git clone https://github.com/your-username/HR_Management/.git
+   git clone https://github.com/SOUMYAPRITHVI/HR_Management/.git
 
 ## How to run
 
@@ -34,7 +35,7 @@ Flask based web application for managing human resource
 
 - `python3 gen_vcard.py -i db query 10` -Get information for a single employee
 
-- ` python3 gen_vcard.py query 12 --displayvcard ` -Get information for a single employee with vcard
+- `python3 gen_vcard.py query 12 --displayvcard ` -Get information for a single employee with vcard
 
 - `python3 gen_vcard.py query --displayvcard 12 -q --opfile newtest1` -Get information for a single employee 
 
