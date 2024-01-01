@@ -1,8 +1,11 @@
-# CSV to vCard Converter
+# HR Mangement
+Flask based web application for managing human resource 
 
 ## Overview
 
-This script converts data from table(use SQLAlchemy) to individual vCards (VCF format) and QR codes in png format for each person and organizes them in a user-specified folder.
+-This script converts data from table(use SQLAlchemy) to individual vCards (VCF format) and QR codes in png format for each person and organizes them in a user-specified folder.
+-Then changed it to web application to handle frontend as reactJS
+
 
 ## Features
 
@@ -19,7 +22,7 @@ This script converts data from table(use SQLAlchemy) to individual vCards (VCF f
 
 1. Clone the repository:
 
-   git clone https://github.com/your-username/csv-to-vcard-converter.git
+   git clone https://github.com/your-username/HR_Management/.git
 
 ## How to run
 
