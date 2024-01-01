@@ -3,9 +3,8 @@ Flask based web application for managing human resource
 
 ## Overview
 
--This script converts data from table(use SQLAlchemy) to individual vCards (VCF format) and QR codes in png format for each    
- person and organizes them in a user-specified folder.
--Then changed it to web application to handle frontend as reactJS
+- This script converts data from table(use SQLAlchemy) to individual vCards (VCF format) and QR codes in png format for each     person and organizes them in a user-specified folder.
+- Then changed it to web application to handle frontend as reactJS
 
 
 ## Features
